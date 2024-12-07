@@ -21,12 +21,19 @@ public:
 protected:
 	bool render();
 	void depthPass();
+	void windowPass();
 	void finalPass();
 	void gui();
 
 private:
 	TextureShader* textureShader;
 	PlaneMesh* mesh;
+	SphereMesh* sphereMesh;
+	CubeMesh* cubeMesh;
+
+
+	OrthoMesh* orthoMesh;
+	RenderTexture* renderTexture;
 
 	Light* light;
 	AModel* model;
