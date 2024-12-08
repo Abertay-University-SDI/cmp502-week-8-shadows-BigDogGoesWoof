@@ -36,6 +36,7 @@ private:
 	RenderTexture* renderTexture;
 
 	Light* light;
+	Light* lightRed;
 	AModel* model;
 	ShadowShader* shadowShader;
 	DepthShader* depthShader;
