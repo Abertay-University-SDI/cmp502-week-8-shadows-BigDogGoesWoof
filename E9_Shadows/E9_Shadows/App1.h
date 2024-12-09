@@ -21,6 +21,7 @@ public:
 protected:
 	bool render();
 	void depthPass();
+	void depthPassRed();
 	void windowPass();
 	void finalPass();
 	void gui();
@@ -36,12 +37,14 @@ private:
 	RenderTexture* renderTexture;
 
 	Light* light;
-	Light* lightRed;
+	Light* lightRed; //think this is better, making an array in here seems bad
+
 	AModel* model;
 	ShadowShader* shadowShader;
 	DepthShader* depthShader;
 
 	ShadowMap* shadowMap;
+	ShadowMap* shadowMapRed;
 };
 
 #endif

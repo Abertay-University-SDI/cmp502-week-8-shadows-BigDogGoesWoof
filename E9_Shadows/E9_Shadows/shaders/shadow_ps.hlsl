@@ -1,15 +1,17 @@
 
+//Start here tomorrow
 Texture2D shaderTexture : register(t0);
-Texture2D depthMapTexture : register(t1);
+//Texture2D depthMapTexture : register(t1);
+Texture2D depthMapTexture[2] : register(t1);
 
 SamplerState diffuseSampler  : register(s0);
 SamplerState shadowSampler : register(s1);
 
 cbuffer LightBuffer : register(b0)
 {
-	float4 ambient;
-	float4 diffuse;
-	float3 direction;
+	float4 ambient[2];
+	float4 diffuse[2];
+	float3 direction[2];
 };
 
 struct InputType
@@ -76,13 +78,13 @@ float4 main(InputType input) : SV_TARGET
     if (hasDepthData(pTexCoord))
     {
         // Has depth map data
-        if (!isInShadow(depthMapTexture, pTexCoord, input.lightViewPos, shadowMapBias))
+        if (!isInShadow(depthMapTexture[0], pTexCoord, input.lightViewPos, shadowMapBias))
         {
             // is NOT in shadow, therefore light
-            colour = calculateLighting(-direction, input.normal, diffuse);
+            colour = calculateLighting(-direction[0], input.normal, diffuse[0]);
         }
     }
     
-    colour = saturate(colour + ambient);
+    colour = saturate(colour + ambient[0]);
     return saturate(colour) * textureColour;
 }

@@ -36,6 +36,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 
 	// This is your shadow map
 	shadowMap = new ShadowMap(renderer->getDevice(), shadowmapWidth, shadowmapHeight);
+	shadowMapRed = new ShadowMap(renderer->getDevice(), shadowmapWidth, shadowmapHeight);
 
 	// Configure directional light
 	light = new Light();
@@ -52,6 +53,7 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	lightRed->setPosition(0.f, 0.f, -10.f);
 	lightRed->generateOrthoMatrix((float)sceneWidth, (float)sceneHeight, 0.1f, 100.f);
 
+	
 }
 
 App1::~App1()
@@ -90,6 +92,8 @@ bool App1::render()
 	// Perform depth pass
 	depthPass();
 
+	depthPassRed();
+
 	windowPass();
 
 	// Render scene
@@ -97,6 +101,8 @@ bool App1::render()
 
 	return true;
 }
+
+//Different Pass for each light source?
 
 void App1::depthPass()
 {
@@ -112,15 +118,8 @@ void App1::depthPass()
 	XMMATRIX lightProjectionMatrix = light->getOrthoMatrix();
 	XMMATRIX worldMatrix = renderer->getWorldMatrix();
 
-	worldMatrix = XMMatrixTranslation(5.f, 7.f, 5.f);
-
-	cubeMesh->sendData(renderer->getDeviceContext());
-	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, lightViewMatrix, lightProjectionMatrix);
-	depthShader->render(renderer->getDeviceContext(), cubeMesh->getIndexCount());
-
-
-	worldMatrix = XMMatrixTranslation(-50.f, 0.f, -10.f);
 	// Render floor
+	worldMatrix = XMMatrixTranslation(-50.f, 0.f, -10.f);
 	mesh->sendData(renderer->getDeviceContext());
 	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, lightViewMatrix, lightProjectionMatrix);
 	depthShader->render(renderer->getDeviceContext(), mesh->getIndexCount());
@@ -138,6 +137,42 @@ void App1::depthPass()
 	renderer->setBackBufferRenderTarget();
 	renderer->resetViewport();
 }
+
+
+void App1::depthPassRed() 
+{
+
+	//Set second shadow map as render target
+	shadowMapRed->BindDsvAndSetNullRenderTarget(renderer->getDeviceContext());
+
+	//create light matrix for second light
+	lightRed->generateViewMatrix();
+	XMMATRIX lightViewMatrix = lightRed->getViewMatrix();
+	XMMATRIX lightProjectionMatrix = lightRed->getOrthoMatrix();
+	XMMATRIX worldMatrix = renderer->getWorldMatrix();
+
+	// Render floor
+	worldMatrix = XMMatrixTranslation(-50.f, 0.f, -10.f);
+	mesh->sendData(renderer->getDeviceContext());
+	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, lightViewMatrix, lightProjectionMatrix); //??? do multiple lights need to go in here all at once? No we're doing multiple passes instead
+	depthShader->render(renderer->getDeviceContext(), mesh->getIndexCount());
+
+	//scale and translate model
+	worldMatrix = renderer->getWorldMatrix();
+	worldMatrix = XMMatrixTranslation(0.f, 7.f, 5.f);
+	XMMATRIX scaleMatrix = XMMatrixScaling(0.5f, 0.5f, 0.5f);
+	worldMatrix = XMMatrixMultiply(worldMatrix, scaleMatrix);
+	// Render model
+	model->sendData(renderer->getDeviceContext());
+	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, lightViewMatrix, lightProjectionMatrix);
+	depthShader->render(renderer->getDeviceContext(), model->getIndexCount());
+
+	// Set back buffer as render target and reset view port.
+	renderer->setBackBufferRenderTarget();
+	renderer->resetViewport();
+}
+
+
 
 void App1::windowPass()
 {
@@ -157,13 +192,6 @@ void App1::windowPass()
 	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, lightViewMatrix, lightProjectionMatrix);
 	depthShader->render(renderer->getDeviceContext(), mesh->getIndexCount());
 
-	worldMatrix = XMMatrixTranslation(5.f, 7.f, 5.f);
-
-	cubeMesh->sendData(renderer->getDeviceContext());
-	depthShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, lightViewMatrix, lightProjectionMatrix);
-	depthShader->render(renderer->getDeviceContext(), cubeMesh->getIndexCount());
-
-
 	worldMatrix = renderer->getWorldMatrix();
 	worldMatrix = XMMatrixTranslation(0.f, 7.f, 5.f);
 	XMMATRIX scaleMatrix = XMMatrixScaling(0.5f, 0.5f, 0.5f);
@@ -177,15 +205,6 @@ void App1::windowPass()
 	renderer->setBackBufferRenderTarget();
 	renderer->resetViewport();
 
-
-
-
-
-
-
-
-
-
 	//model->sendData(renderer->getDeviceContext());
 	shadowShader->render(renderer->getDeviceContext(), model->getIndexCount());
 	// Reset the render target back to the original back buffer and not the render to texture anymore.
@@ -198,6 +217,8 @@ void App1::finalPass()
 	// Clear the scene. (default blue colour)
 	renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
 	camera->update();
+
+	Light* lightArray[2] = { light, lightRed };
 
 	XMMATRIX worldMatrix = renderer->getWorldMatrix();
 
@@ -213,9 +234,6 @@ void App1::finalPass()
 	renderer->setZBuffer(true);
 
 
-
-	
-
 	// get the world, view, projection, and ortho matrices from the camera and Direct3D objects.
 	//XMMATRIX worldMatrix = renderer->getWorldMatrix();
 	XMMATRIX viewMatrix = camera->getViewMatrix();
@@ -224,15 +242,9 @@ void App1::finalPass()
 	worldMatrix = XMMatrixTranslation(-50.f, 0.f, -10.f);
 	// Render floor
 	mesh->sendData(renderer->getDeviceContext());
-	shadowShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), shadowMap->getDepthMapSRV(), light);
+	ID3D11ShaderResourceView* depthArray[2] = { shadowMap->getDepthMapSRV(), shadowMapRed->getDepthMapSRV() };
+	shadowShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), depthArray, lightArray); //Light Arrays may not work, may need to be made after light objects are made
 	shadowShader->render(renderer->getDeviceContext(), mesh->getIndexCount());
-
-	worldMatrix = XMMatrixTranslation(5.f, 7.f, 5.f);
-
-	cubeMesh->sendData(renderer->getDeviceContext());
-	shadowShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), shadowMap->getDepthMapSRV(), light);
-	shadowShader->render(renderer->getDeviceContext(), cubeMesh->getIndexCount());
-
 
 
 	// Render model
@@ -241,7 +253,8 @@ void App1::finalPass()
 	XMMATRIX scaleMatrix = XMMatrixScaling(0.5f, 0.5f, 0.5f);
 	worldMatrix = XMMatrixMultiply(worldMatrix, scaleMatrix);
 	model->sendData(renderer->getDeviceContext());
-	shadowShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), shadowMap->getDepthMapSRV(), light);
+	ID3D11ShaderResourceView* depthArray1[2] = { shadowMap->getDepthMapSRV(), shadowMapRed->getDepthMapSRV() };
+	shadowShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), depthArray1, lightArray);
 	shadowShader->render(renderer->getDeviceContext(), model->getIndexCount());
 
 	gui();
