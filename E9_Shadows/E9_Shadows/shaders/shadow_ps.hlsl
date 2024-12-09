@@ -74,6 +74,7 @@ float4 main(InputType input) : SV_TARGET
 
 	// Calculate the projected texture coordinates.
     float2 pTexCoord = getProjectiveCoords(input.lightViewPos[0]);
+    float2 pTexCoord1 = getProjectiveCoords(input.lightViewPos[1]);
 	
     // Shadow test. Is or isn't in shadow
     if (hasDepthData(pTexCoord))
@@ -85,9 +86,18 @@ float4 main(InputType input) : SV_TARGET
             colour = calculateLighting(-direction[0], input.normal, diffuse[0]);
         }
     }
+    if (hasDepthData(pTexCoord1))
+    {
+        // Has depth map data
+        if (!isInShadow(depthMapTexture[1], pTexCoord1, input.lightViewPos[1], shadowMapBias))
+        {
+            // is NOT in shadow, therefore light
+            colour1 = calculateLighting(-direction[1], input.normal, diffuse[1]);
+        }
+    }
     
-    colour = calculateLighting(-direction[1], input.normal, diffuse[1]);
+    //colour = calculateLighting(-direction[0], input.normal, diffuse[0]);
   
-    //colour = saturate(colour + ambient[0] +ambient[1]);
+    colour = saturate(colour +colour1 + ambient[0] +ambient[1]);
     return saturate(colour) * textureColour;
 }
