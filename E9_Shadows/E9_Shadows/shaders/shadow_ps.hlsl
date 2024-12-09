@@ -19,7 +19,7 @@ struct InputType
     float4 position : SV_POSITION;
     float2 tex : TEXCOORD0;
 	float3 normal : NORMAL;
-    float4 lightViewPos : TEXCOORD1;
+    float4 lightViewPos[2] : TEXCOORD1;
 };
 
 // Calculate lighting intensity based on direction and normal. Combine with light colour.
@@ -69,22 +69,25 @@ float4 main(InputType input) : SV_TARGET
 {
     float shadowMapBias = 0.005f;
     float4 colour = float4(0.f, 0.f, 0.f, 1.f);
+    float4 colour1 = float4(0.f, 0.f, 0.f, 1.f);
     float4 textureColour = shaderTexture.Sample(diffuseSampler, input.tex);
 
 	// Calculate the projected texture coordinates.
-    float2 pTexCoord = getProjectiveCoords(input.lightViewPos);
+    float2 pTexCoord = getProjectiveCoords(input.lightViewPos[0]);
 	
     // Shadow test. Is or isn't in shadow
     if (hasDepthData(pTexCoord))
     {
         // Has depth map data
-        if (!isInShadow(depthMapTexture[0], pTexCoord, input.lightViewPos, shadowMapBias))
+        if (!isInShadow(depthMapTexture[0], pTexCoord, input.lightViewPos[0], shadowMapBias))
         {
             // is NOT in shadow, therefore light
             colour = calculateLighting(-direction[0], input.normal, diffuse[0]);
         }
     }
     
-    colour = saturate(colour + ambient[0]);
+    colour = calculateLighting(-direction[1], input.normal, diffuse[1]);
+  
+    //colour = saturate(colour + ambient[0] +ambient[1]);
     return saturate(colour) * textureColour;
 }

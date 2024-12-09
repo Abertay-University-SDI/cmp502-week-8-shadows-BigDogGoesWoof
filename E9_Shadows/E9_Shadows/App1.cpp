@@ -49,8 +49,8 @@ void App1::init(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeigh
 	lightRed = new Light();
 	lightRed->setAmbientColour(0.3f, 0.0f, 0.0f, 1.0f);
 	lightRed->setDiffuseColour(1.0f, 0.0f, 0.0f, 1.0f);
-	lightRed->setDirection(0.5f, -0.7f, 0.7f);
-	lightRed->setPosition(0.f, 0.f, -10.f);
+	lightRed->setDirection(-0.5f, -0.7f, 0.7f);
+	lightRed->setPosition(0.f, 0.f, -10.0f);
 	lightRed->generateOrthoMatrix((float)sceneWidth, (float)sceneHeight, 0.1f, 100.f);
 
 	
@@ -94,7 +94,7 @@ bool App1::render()
 
 	depthPassRed();
 
-	windowPass();
+	//windowPass();
 
 	// Render scene
 	finalPass();
@@ -218,7 +218,7 @@ void App1::finalPass()
 	renderer->beginScene(0.39f, 0.58f, 0.92f, 1.0f);
 	camera->update();
 
-	Light* lightArray[2] = { light, lightRed };
+	Light* lightArray[2] = {lightRed , light };
 
 	XMMATRIX worldMatrix = renderer->getWorldMatrix();
 
@@ -243,7 +243,7 @@ void App1::finalPass()
 	// Render floor
 	mesh->sendData(renderer->getDeviceContext());
 	ID3D11ShaderResourceView* depthArray[2] = { shadowMap->getDepthMapSRV(), shadowMapRed->getDepthMapSRV() };
-	shadowShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), depthArray, lightArray); //Light Arrays may not work, may need to be made after light objects are made
+	shadowShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), depthArray, lightRed, light); //Light Arrays may not work, may need to be made after light objects are made
 	shadowShader->render(renderer->getDeviceContext(), mesh->getIndexCount());
 
 
@@ -254,7 +254,7 @@ void App1::finalPass()
 	worldMatrix = XMMatrixMultiply(worldMatrix, scaleMatrix);
 	model->sendData(renderer->getDeviceContext());
 	ID3D11ShaderResourceView* depthArray1[2] = { shadowMap->getDepthMapSRV(), shadowMapRed->getDepthMapSRV() };
-	shadowShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), depthArray1, lightArray);
+	shadowShader->setShaderParameters(renderer->getDeviceContext(), worldMatrix, viewMatrix, projectionMatrix, textureMgr->getTexture(L"brick"), depthArray1, lightRed, light);
 	shadowShader->render(renderer->getDeviceContext(), model->getIndexCount());
 
 	gui();
